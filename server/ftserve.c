@@ -42,7 +42,27 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/**
+ * Function-Make directories
+ * Last Edit: Oct.16
+*/
 
+void ftserve_mkdr(int , int , char* dirname)
+{
+	string temp=dirname;	
+	system('mkdir'+temp);
+	ftserve_list(sock_data,sock_control);
+}
+
+/**
+ * Function-Delete directories
+ * Last Edit: Oct.16
+*/
+
+void ftserve_dldr(int sock_control, int sock_data, char* dirname)
+{
+	
+}
 
 /**
  * Send file specified in filename over data connection, sending
@@ -99,7 +119,7 @@ int ftserve_list(int sock_data, int sock_control)
 	char data[MAXSIZE];
 	size_t num_read;									
 	FILE* fd;
-	
+
 	int rs = system("ls -l | tail -n+2 > tmp.txt");
 	if ( rs < 0) {
 		exit(1);
@@ -184,7 +204,7 @@ int ftserve_check_user(char*user, char*pass)
 	FILE* fd;
 	int auth = 0;
 	
-	fd = fopen("1.auth", "r");
+	fd = fopen(".auth", "r");
 	if (fd == NULL) {
 		perror("file not found");
 		exit(1);
@@ -212,8 +232,6 @@ int ftserve_check_user(char*user, char*pass)
 	}
 	free(line);	
 	fclose(fd);	
-	if(auth==1)
-		printf("Auth Successfully!");	
 	return auth;
 }
 
@@ -294,9 +312,9 @@ int ftserve_recv_cmd(int sock_control, char*cmd, char*arg)
 	if (strcmp(cmd, "QUIT")==0) {
 		rc = 221;
 	} else if((strcmp(cmd, "USER")==0) || (strcmp(cmd, "PASS")==0) ||
-			(strcmp(cmd, "LIST")==0) || (strcmp(cmd, "RETR")==0)) {
+			(strcmp(cmd, "LIST")==0) || (strcmp(cmd, "RETR")==0) || 			(strcmp(cmd, "MKDR")==0) || (strcmp(cmd, "DLDR")==0)) {
 		rc = 200;
-	} else { //invalid command
+	} else { //invalid command		
 		rc = 502;
 	}
 
@@ -345,12 +363,19 @@ void ftserve_process(int sock_control)
 			}
 
 			// Execute command
-			if (strcmp(cmd, "LIST")==0) { // Do list
+			if (strcmp(cmd, "LIST")==0) 
+			{ // Do list
 				ftserve_list(sock_data, sock_control);
-			} else if (strcmp(cmd, "RETR")==0) { // Do get <filename>
+			} else if (strcmp(cmd, "RETR")==0) 
+			{ // Do get <filename>
 				ftserve_retr(sock_control, sock_data, arg);
+			}else if (strcmp(cmd, "MKDR")==0) 
+			{ 
+				ftserve_mkdr(sock_control, sock_data, arg);
+			}else if (strcmp(cmd, "DLDR")==0) 
+			{ 
+				ftserve_dldr(sock_control, sock_data, arg);
 			}
-		
 			// Close data connection
 			close(sock_data);
 		} 
