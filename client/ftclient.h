@@ -67,6 +67,21 @@ int ftclient_send_cmd(struct command *cmd);
 
 
 /**
+ *  Send mkdr command to server
+ */
+void ftclient_mkdr(int data_sock, int sock_control, struct command *cs);
+
+/*
+ *  Upload file without BreakPoint
+ */
+void ftclient_load(int data_sock, char* arg);
+
+/**
+ *  CD directory in server
+ */
+void ftclient_cd(int data_sock, int sock_control, char* arg);
+
+/**
  * Get login details from user and
  * send to server for authentication
  */

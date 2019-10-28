@@ -42,6 +42,8 @@ void print_reply(int rc)
 }
 
 
+
+
 /**
  * Parse command in cstruct
  */ 
@@ -58,7 +60,7 @@ int ftclient_read_command(char* buf, int size, struct command *cstruct)
 		
 	char *arg = NULL;
 	arg = strtok (buf," "); 	/* cut buf by " " */
-	arg = strtok (NULL, " ");
+	
 
 	if (arg != NULL){
 		// store the argument if there is one
@@ -75,23 +77,31 @@ int ftclient_read_command(char* buf, int size, struct command *cstruct)
 	else if (strcmp(buf, "quit") == 0) {
 		strcpy(cstruct->code, "QUIT");		
 	}
-/*---------v1------------10.16*/
-	else if (strcmp(buf, "cd") == 0) {
-		strcpy(cstruct->code, "CD");
+/*---------v1------------10.23*/
+	else if (strcmp(buf, "mkdr") == 0) {
+		strcpy(cstruct->code, "MKDR");
 	}
-/*---------end-----------10.16*/
+	else if (strcmp(buf, "load") == 0) {
+		strcpy(cstruct->code, "LOAD");
+	}
+	else if (strcmp(buf, "cddr") == 0) {
+		strcpy(cstruct->code, "CDDR");
+	}
+/*---------end-----------10.23*/
 	else {//invalid
 		return -1;
 	}
-
+	
 	// store code in beginning of buffer
 	memset(buf, 0, 400);
 	strcpy(buf, cstruct->code);
-
+	
+	arg = strtok (NULL, " ");
 	// if there's an arg, append it to the buffer
 	if (arg != NULL) {
 		strcat(buf, " ");
 		strncat(buf, cstruct->arg, strlen(cstruct->arg));
+		printf("==/check: %s/==",&buf);
 	}
 	
 	return 0;
@@ -200,7 +210,54 @@ int ftclient_send_cmd(struct command *cmd)
 	return 0;
 }
 
+/**
+ *  Send mkdr command to server
+ */
+void ftclient_mkdr(int data_sock, int sock_control, struct command *cs)
+{
+	ftclient_send_cmd(&cs);
+	int ret_code = read_reply();
+	if (ret_code == 550)
+		printf("Failed to make a directory.");
+}
 
+/**
+ *  Upload a file to server
+ */
+void ftclient_load(int data_sock, char* arg)
+{
+	int fd = open(cmd.arg, O_RDONLY);
+	char buffer[];
+	int rc;
+	struct stat st;
+	
+	if (fp == NULL) 
+	{
+		perror("Error file name");
+	}
+	stat(arg, &st);
+	int len = st.st_size;
+	if (sendfile(data_sock, fd, NULL, len) < 0)
+	{
+		perror("Sending error");
+	}
+}
+
+/**
+ *  CD directory in server
+ */
+void ftclient_cd(int data_sock, int sock_control, char* arg)
+{
+	char buffer[MAXSIZE];
+	sprintf(buffer, "%s", cmd->arg);
+	
+	int rc = send(data_sock, buffer, (int)strlen(buffer), 0);
+	if (rc < 0)
+	{
+		perror("Error sending command to server");
+	
+	}
+}
 
 /**
  * Get login details from user and
@@ -327,7 +384,7 @@ int main(int argc, char* argv[])
 	ftclient_login();
 
 	while (1) { // loop until user types quit
-
+		
 		// Get a command from user
 		if ( ftclient_read_command(buffer, sizeof buffer, &cmd) < 0) {
 			printf("Invalid command\n");
@@ -372,6 +429,36 @@ int main(int argc, char* argv[])
 				}
 				ftclient_get(data_sock, sock_control, cmd.arg);
 				print_reply(read_reply()); 
+			}
+			else if (strcmp(cmd.code, "CDDR") ==0 ) {
+				if (read_reply() == 550) {
+					print_reply(550);
+					close(data_sock);
+					continue;
+				};
+				ftclient_cd(data_sock, cmd.arg);
+				print_reply(read_reply()); 
+			}
+			
+			else if (strcmp(cmd.code, "MKDR") == 0) {
+			        if (read_reply() == 550) {
+			                print_reply(550);
+			                close(data_sock);
+			                continue;
+			        }
+			        ftclient_mkdr(cmd);
+			        print_reply(read_reply());
+			        continue;
+			}
+			else if (strcmp(cmd.code, "LOAD") == 0) {
+				if (read_reply() == 550) {
+					print_reply(550);
+					close(data_sock);
+					continue;
+				}
+				ftclient_load(data_sock, sock_control, cmd.arg);
+				print_reply(read_reply());
+				continue;
 			}
 			close(data_sock);
 		}
